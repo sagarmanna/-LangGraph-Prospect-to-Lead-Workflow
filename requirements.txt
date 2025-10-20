@@ -1,0 +1,8 @@
+python-dotenv
+requests
+openai
+jsonschema
+gspread
+pandas
+pytest
+

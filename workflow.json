@@ -1,0 +1,104 @@
+{
+  "workflow_name": "OutboundLeadGeneration",
+  "description": "End-to-end AI agent workflow to find, contact, and qualify leads",
+  "config": {
+    "scoring": {
+      "weights": {
+        "revenue": 0.3,
+        "employee_count": 0.2,
+        "technologies": 0.2,
+        "signals": 0.3
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "prospect_search",
+      "agent": "ProspectSearchAgent",
+      "inputs": {
+        "icp": {
+          "industry": "SaaS",
+          "location": "USA",
+          "employee_count": { "min": 100, "max": 1000 },
+          "revenue": { "min": 20000000, "max": 200000000 }
+        },
+        "signals": ["recent_funding", "hiring_for_sales"]
+      },
+      "instructions": "Use Clay and Apollo APIs to search for company and contact data matching ICP. Return structured leads.",
+      "tools": [
+        { "name": "ClayAPI", "config": { "api_key": "{{CLAY_API_KEY}}", "endpoint": "https://api.clay.com/search" } },
+        { "name": "ApolloAPI", "config": { "api_key": "{{APOLLO_API_KEY}}", "endpoint": "https://api.apollo.io/v1/mixed_search" } }
+      ],
+      "output_schema": {
+        "leads": [
+          { "company": "string", "contact_name": "string", "email": "string", "linkedin": "string", "signal": "string" }
+        ]
+      }
+    },
+    {
+      "id": "enrichment",
+      "agent": "DataEnrichmentAgent",
+      "inputs": { "leads": "{{prospect_search.output.leads}}" },
+      "instructions": "Enrich lead data using Clearbit or PeopleDataLabs.",
+      "tools": [
+        { "name": "Clearbit", "config": { "api_key": "{{CLEARBIT_KEY}}" } }
+      ],
+      "output_schema": {
+        "enriched_leads": [
+          { "company": "string", "contact_name": "string", "role": "string", "email": "string", "technologies": ["string"] }
+        ]
+      }
+    },
+    {
+      "id": "scoring",
+      "agent": "ScoringAgent",
+      "inputs": {
+        "enriched_leads": "{{enrichment.output.enriched_leads}}",
+        "scoring_criteria": "{{config.scoring}}"
+      },
+      "instructions": "Score leads based on configurable ICP scoring function.",
+      "tools": [],
+      "output_schema": { "ranked_leads": "array" }
+    },
+    {
+      "id": "outreach_content",
+      "agent": "OutreachContentAgent",
+      "inputs": {
+        "ranked_leads": "{{scoring.output.ranked_leads}}",
+        "persona": "SDR",
+        "tone": "friendly"
+      },
+      "instructions": "Generate personalized outreach messages using LLM and prospect context.",
+      "tools": [{ "name": "OpenAI", "config": { "api_key": "{{OPENAI_KEY}}" } }],
+      "output_schema": {
+        "messages": [{ "lead_id": "string", "email_subject": "string", "email_body": "string" }]
+      }
+    },
+    {
+      "id": "outreach_executor",
+      "agent": "OutreachExecutorAgent",
+      "inputs": { "messages": "{{outreach_content.output.messages}}" },
+      "instructions": "Send emails using SendGrid or Apollo and log delivery.",
+      "tools": [
+        { "name": "SendGrid", "config": { "api_key": "{{SENDGRID_API_KEY}}" } }
+      ],
+      "output_schema": { "sent_status": "array", "campaign_id": "string" }
+    },
+    {
+      "id": "response_tracker",
+      "agent": "ResponseTrackerAgent",
+      "inputs": { "campaign_id": "{{outreach_executor.output.campaign_id}}" },
+      "instructions": "Monitor email responses and meeting bookings using Apollo API.",
+      "tools": [{ "name": "ApolloAPI", "config": { "api_key": "{{APOLLO_API_KEY}}" } }],
+      "output_schema": { "responses": "array" }
+    },
+    {
+      "id": "feedback_trainer",
+      "agent": "FeedbackTrainerAgent",
+      "inputs": { "responses": "{{response_tracker.output.responses}}", "config": "{{config}}" },
+      "instructions": "Analyze open/click/reply data, suggest new configs (subject line change, ICP tweaks). Write recommendations to Google Sheets and wait for approval.",
+      "tools": [{ "name": "GoogleSheets", "config": { "sheet_id": "{{SHEET_ID}}" } }],
+      "output_schema": { "recommendations": "array" }
+    }
+  ]
+}
