@@ -1,6 +1,5 @@
 # 🚀 LangGraph Prospect-to-Lead Workflow
-
-![Workflow Diagram](https://via.placeholder.com/800x300?text=LangGraph+Prospect-to-Lead+Workflow+Diagram)  
+ 
 *Visual representation of the modular AI-driven workflow.*
 
 ## Project Overview
@@ -38,14 +37,3 @@ The workflow is fully configurable via `workflow.json` and is modular, allowing 
 | Response Tracking | `ResponseTrackerAgent` | Tracks opens, clicks, replies | Apollo API |
 | Feedback Trainer | `FeedbackTrainerAgent` | Analyzes performance & suggests improvements | Google Sheets API |
 
----
-
-## 🔧 Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/langgraph-prospect-to-lead.git
-cd langgraph-prospect-to-lead
-
-# Install dependencies
-pip install -r requirements.txt
